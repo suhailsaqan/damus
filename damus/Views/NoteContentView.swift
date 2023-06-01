@@ -57,6 +57,10 @@ struct NoteContentView: View {
         return options.contains(.pad_content)
     }
     
+    var only_txt: Bool {
+        return options.contains(.only_text)
+    }
+    
     var preview: LinkViewRepresentable? {
         guard show_images,
               case .loaded(let preview) = preview_model.state,
@@ -175,9 +179,9 @@ struct NoteContentView: View {
                 if force_artifacts {
                     plan.load_artifacts = true
                 }
-                await preload_event(plan: plan, state: damus_state)
+                await preload_event(plan: plan, state: damus_state, only_text: only_txt)
             } else if force_artifacts {
-                let arts = render_note_content(ev: event, profiles: damus_state.profiles, privkey: damus_state.keypair.privkey)
+                let arts = render_note_content(ev: event, profiles: damus_state.profiles, privkey: damus_state.keypair.privkey, only_text: only_txt)
                 self.artifacts_model.state = .loaded(arts)
             }
         }
@@ -307,13 +311,13 @@ enum NoteArtifactState {
     }
 }
 
-func render_note_content(ev: NostrEvent, profiles: Profiles, privkey: String?) -> NoteArtifacts {
+func render_note_content(ev: NostrEvent, profiles: Profiles, privkey: String?, only_text: Bool = false) -> NoteArtifacts {
     let blocks = ev.blocks(privkey)
     
-    return render_blocks(blocks: blocks, profiles: profiles)
+    return render_blocks(blocks: blocks, profiles: profiles, only_text: only_text)
 }
 
-func render_blocks(blocks: [Block], profiles: Profiles) -> NoteArtifacts {
+func render_blocks(blocks: [Block], profiles: Profiles, only_text: Bool = false) -> NoteArtifacts {
     var invoices: [Invoice] = []
     var urls: [UrlType] = []
     
@@ -367,6 +371,10 @@ func render_blocks(blocks: [Block], profiles: Profiles) -> NoteArtifacts {
                 return str + url_str(url)
             }
         }
+    }
+
+    if (only_text) {
+        return NoteArtifacts(content: txt, urls: [], invoices: [])
     }
 
     return NoteArtifacts(content: txt, urls: urls, invoices: invoices)
